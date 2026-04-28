@@ -1,7 +1,29 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
+const rawSupabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined
+const rawSupabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
+
+function normalizeSupabaseUrl(value: string | undefined) {
+  const cleanValue = value?.trim()
+  if (!cleanValue) return undefined
+
+  const urlMatch = cleanValue.match(/https:\/\/[a-z0-9-]+\.supabase\.co/i)
+  if (urlMatch) return urlMatch[0]
+
+  const projectRefMatch = cleanValue.match(/\b[a-z0-9]{20}\b/i)
+  if (projectRefMatch) return `https://${projectRefMatch[0]}.supabase.co`
+
+  return cleanValue
+}
+
+function normalizeSupabaseKey(value: string | undefined) {
+  const cleanValue = value?.trim()
+  if (!cleanValue) return undefined
+  return cleanValue.split(/\s+/)[0]
+}
+
+const supabaseUrl = normalizeSupabaseUrl(rawSupabaseUrl)
+const supabaseAnonKey = normalizeSupabaseKey(rawSupabaseAnonKey)
 
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey)
 
