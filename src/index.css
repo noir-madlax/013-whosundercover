@@ -71,6 +71,19 @@ body::before {
     linear-gradient(180deg, #0b1020 0%, #11172b 56%, #090d18 100%);
 }
 
+#root::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 18% 14%, rgba(157, 124, 255, 0.24), transparent 28%),
+    radial-gradient(circle at 84% 18%, rgba(66, 165, 255, 0.2), transparent 24%),
+    radial-gradient(circle at 50% 96%, rgba(255, 77, 109, 0.14), transparent 30%),
+    linear-gradient(180deg, #0b1020 0%, #11172b 56%, #090d18 100%);
+}
+
 h1,
 h2,
 h3,
