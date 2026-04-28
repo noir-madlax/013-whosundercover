@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { HashRouter, Link, Route, Routes, useNavigate, useParams } from 'react-router-dom'
 import {
   BadgeCheck,
@@ -302,6 +302,11 @@ function GameRoom({
   const alivePlayers = getAlivePlayers(players)
   const currentSpeaker = getCurrentSpeaker(players, room.speaker_index)
   const myVote = votes.find((vote) => vote.voter_player_id === myPlayer?.id)
+  const votedPlayerIds = new Set(votes.map((vote) => vote.voter_player_id))
+  const voteCounts = votes.reduce<Record<string, number>>((counts, vote) => {
+    counts[vote.target_player_id] = (counts[vote.target_player_id] ?? 0) + 1
+    return counts
+  }, {})
   const canVote = room.status === 'voting' && myPlayer && !myPlayer.is_eliminated
   const [blankGuess, setBlankGuess] = useState('')
 
@@ -321,6 +326,7 @@ function GameRoom({
         )}
         {room.status === 'speaking' && (
           <SpeakingPanel
+            room={room}
             currentSpeaker={currentSpeaker}
             isHost={isHost}
             busy={busy}
@@ -336,15 +342,18 @@ function GameRoom({
             busy={busy}
             isHost={isHost}
             voteCount={votes.length}
+            voteCounts={voteCounts}
             onVote={(targetId) => onAction(() => submitVote(room.id, targetId))}
             onResolve={() => onAction(() => resolveVote(room.id))}
           />
         )}
         {room.status === 'blank_guess' && (
           <section className="phase-panel">
-            <Ticket className="phase-icon amber" size={30} />
+            <TurnIndicator icon={<Ticket size={22} />} tone="danger" label={`第 ${room.round} 轮`} title="白板猜词" />
             <h2>白板猜词</h2>
-            <p className="muted">白板玩家如果猜中平民词，将直接独赢。</p>
+            <ChatBubble tone="system" speaker="系统提示">
+              白板玩家如果猜中平民词，将直接独赢。
+            </ChatBubble>
             {assignment?.role === 'blank' ? (
               <div className="join-row">
                 <input value={blankGuess} onChange={(event) => setBlankGuess(event.target.value)} placeholder="输入平民词" />
@@ -364,9 +373,11 @@ function GameRoom({
         )}
         {room.status === 'finished' && (
           <section className="phase-panel">
-            <BadgeCheck className="phase-icon teal" size={34} />
+            <TurnIndicator icon={<BadgeCheck size={22} />} tone="safe" label="结算" title={winnerLabel(room.winner)} />
             <h2>{winnerLabel(room.winner)}</h2>
-            <p className="muted">{room.result_message ?? '本局结束。'}</p>
+            <ChatBubble tone="system" speaker="系统提示">
+              {room.result_message ?? '本局结束。'}
+            </ChatBubble>
             {isHost && (
               <button className="primary-button" type="button" disabled={busy} onClick={() => onAction(() => startGame(room.id))}>
                 <RefreshCw size={18} />
@@ -380,17 +391,19 @@ function GameRoom({
       <aside className="room-card side-panel">
         <div className="panel-title">
           <Users size={18} />
-          玩家
+          <span>玩家列表</span>
+          <StatusBadge tone="safe">{alivePlayers.length} 存活</StatusBadge>
         </div>
         <div className="player-list">
           {players.map((player) => (
-            <div className={`player-row ${player.is_eliminated ? 'eliminated' : ''}`} key={player.id}>
-              <span className="seat">{player.seat}</span>
-              <span>{player.nickname}</span>
-              {player.is_host && <Crown size={15} className="host-icon" />}
-              {player.id === myPlayer?.id && <span className="mini-tag">我</span>}
-              {player.is_eliminated && <span className="mini-tag danger">出局</span>}
-            </div>
+            <PlayerCard
+              key={player.id}
+              player={player}
+              isCurrent={player.id === currentSpeaker?.id && room.status === 'speaking'}
+              isMe={player.id === myPlayer?.id}
+              hasVoted={votedPlayerIds.has(player.id)}
+              voteCount={voteCounts[player.id] ?? 0}
+            />
           ))}
         </div>
         <button className="secondary-button full" type="button" onClick={() => void onRefresh()}>
@@ -420,9 +433,11 @@ function LobbyPanel({
 
   return (
     <section className="phase-panel">
-      <Users className="phase-icon teal" size={32} />
+      <TurnIndicator icon={<Users size={22} />} tone="safe" label="房间大厅" title="等待玩家" />
       <h2>等待玩家加入</h2>
-      <p className="muted">至少 4 人开局。7 人及以上自动配置 2 个卧底。</p>
+      <ChatBubble tone="system" speaker="系统提示">
+        至少 4 人开局。7 人及以上自动配置 2 个卧底。
+      </ChatBubble>
       <div className="rule-grid">
         <Metric label="平民" value={plan.civilians} />
         <Metric label="卧底" value={plan.undercovers} />
@@ -474,7 +489,7 @@ function RevealPanel({
 
   return (
     <section className="phase-panel">
-      <Eye className="phase-icon coral" size={32} />
+      <TurnIndicator icon={<Eye size={22} />} tone="focus" label="身份确认" title="只给你看" />
       <h2>查看你的身份词</h2>
       <div className="word-card">
         <span>{roleText}</span>
@@ -493,12 +508,14 @@ function RevealPanel({
 }
 
 function SpeakingPanel({
+  room,
   currentSpeaker,
   isHost,
   busy,
   onNext,
   onVote,
 }: {
+  room: Room
   currentSpeaker: RoomPlayer | null
   isHost: boolean
   busy: boolean
@@ -507,11 +524,19 @@ function SpeakingPanel({
 }) {
   return (
     <section className="phase-panel">
-      <MessageCircle className="phase-icon teal" size={32} />
+      <TurnIndicator icon={<MessageCircle size={22} />} tone="focus" label={`第 ${room.round} 轮`} title="正在发言" />
       <h2>轮流描述</h2>
       <div className="speaker-card">
         <span>当前发言</span>
         <strong>{currentSpeaker?.nickname ?? '等待玩家'}</strong>
+      </div>
+      <div className="chat-stack">
+        <ChatBubble tone="active" speaker={currentSpeaker?.nickname ?? '当前玩家'}>
+          请用一句话描述你的词，别直接说出答案。
+        </ChatBubble>
+        <ChatBubble tone="system" speaker="系统提示">
+          观察措辞、犹豫和过度解释，线索往往藏在细节里。
+        </ChatBubble>
       </div>
       {isHost ? (
         <div className="button-grid two">
@@ -537,6 +562,7 @@ function VotingPanel({
   busy,
   isHost,
   voteCount,
+  voteCounts,
   onVote,
   onResolve,
 }: {
@@ -546,25 +572,25 @@ function VotingPanel({
   busy: boolean
   isHost: boolean
   voteCount: number
+  voteCounts: Record<string, number>
   onVote: (targetId: string) => void
   onResolve: () => void
 }) {
   return (
     <section className="phase-panel">
-      <Vote className="phase-icon amber" size={32} />
+      <TurnIndicator icon={<Vote size={22} />} tone="danger" label="投票阶段" title="锁定嫌疑人" />
       <h2>投出你怀疑的人</h2>
       <div className="vote-list">
         {players.map((player) => (
-          <button
-            className={`vote-option ${myVote === player.id ? 'selected' : ''}`}
+          <VoteButton
             key={player.id}
-            type="button"
+            selected={myVote === player.id}
             disabled={!canVote || busy}
             onClick={() => onVote(player.id)}
+            voteCount={voteCounts[player.id] ?? 0}
           >
-            <span>{player.nickname}</span>
-            {myVote === player.id && <BadgeCheck size={16} />}
-          </button>
+            {player.nickname}
+          </VoteButton>
         ))}
       </div>
       <p className="hint">已投票 {voteCount} / {players.length}</p>
@@ -577,7 +603,112 @@ function VotingPanel({
   )
 }
 
+function PlayerCard({
+  player,
+  isCurrent,
+  isMe,
+  hasVoted,
+  voteCount,
+}: {
+  player: RoomPlayer
+  isCurrent: boolean
+  isMe: boolean
+  hasVoted: boolean
+  voteCount: number
+}) {
+  return (
+    <div className={`player-card ${isCurrent ? 'current' : ''} ${player.is_eliminated ? 'eliminated' : ''}`}>
+      <div className="player-avatar">{player.nickname.slice(0, 1)}</div>
+      <div className="player-meta">
+        <div className="player-name-row">
+          <span className="player-name">{player.nickname}</span>
+          {player.is_host && <Crown size={14} className="host-icon" />}
+        </div>
+        <div className="player-status-row">
+          <StatusBadge tone={player.is_eliminated ? 'danger' : isCurrent ? 'focus' : 'safe'}>
+            {player.is_eliminated ? '已淘汰' : isCurrent ? '发言中' : '存活'}
+          </StatusBadge>
+          {hasVoted && <StatusBadge tone="focus">已投票</StatusBadge>}
+        </div>
+      </div>
+      <div className="player-side-tags">
+        {isMe && <span className="mini-tag">我</span>}
+        {voteCount > 0 && <span className="vote-count">{voteCount}</span>}
+      </div>
+    </div>
+  )
+}
+
+function ChatBubble({
+  speaker,
+  tone,
+  children,
+}: {
+  speaker: string
+  tone: 'active' | 'system'
+  children: ReactNode
+}) {
+  return (
+    <div className={`chat-bubble ${tone}`}>
+      <span>{speaker}</span>
+      <p>{children}</p>
+    </div>
+  )
+}
+
+function VoteButton({
+  selected,
+  disabled,
+  voteCount,
+  onClick,
+  children,
+}: {
+  selected: boolean
+  disabled: boolean
+  voteCount: number
+  onClick: () => void
+  children: ReactNode
+}) {
+  return (
+    <button className={`vote-button ${selected ? 'selected' : ''}`} type="button" disabled={disabled} onClick={onClick}>
+      <span>{children}</span>
+      <span className="vote-button-meta">
+        {voteCount > 0 && <span>{voteCount}票</span>}
+        {selected && <BadgeCheck size={16} />}
+      </span>
+    </button>
+  )
+}
+
+function StatusBadge({ tone, children }: { tone: 'safe' | 'focus' | 'danger'; children: ReactNode }) {
+  return <span className={`status-badge ${tone}`}>{children}</span>
+}
+
+function TurnIndicator({
+  icon,
+  tone,
+  label,
+  title,
+}: {
+  icon: ReactNode
+  tone: 'safe' | 'focus' | 'danger'
+  label: string
+  title: string
+}) {
+  return (
+    <div className={`turn-indicator ${tone}`}>
+      <span className="turn-icon">{icon}</span>
+      <span className="turn-copy">
+        <small>{label}</small>
+        <strong>{title}</strong>
+      </span>
+    </div>
+  )
+}
+
 function RoomHeader({ room, players }: { room: Room; players: RoomPlayer[] }) {
+  const aliveCount = players.filter((player) => !player.is_eliminated).length
+
   return (
     <header className="room-header">
       <Link className="brand-row compact-brand" to="/">
@@ -588,10 +719,10 @@ function RoomHeader({ room, players }: { room: Room; players: RoomPlayer[] }) {
         <Ticket size={16} />
         {room.code}
       </div>
-      <div className="status-pill">
-        <Settings size={15} />
-        {statusLabel(room.status)} · {players.length}/10
-      </div>
+      <StatusBadge tone={room.status === 'voting' ? 'danger' : room.status === 'speaking' ? 'focus' : 'safe'}>
+        <Settings size={14} />
+        {statusLabel(room.status)} · {aliveCount}/{players.length}
+      </StatusBadge>
     </header>
   )
 }
