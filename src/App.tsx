@@ -91,8 +91,8 @@ function HomePage() {
           <span>谁是卧底</span>
         </div>
         <div className="hero-copy">
-          <h1>开房、发词、投票，一局马上开始。</h1>
-          <p>实时房间版聚会小游戏。房主控场，玩家用房号加入，只看到自己的身份词。</p>
+          <h1>开房发词，一局马上开始。</h1>
+          <p>房主控场，玩家用 6 位房号加入，只看到自己的身份词。</p>
         </div>
         <StatusStrip />
       </section>
