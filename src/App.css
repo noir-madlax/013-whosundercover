@@ -634,6 +634,163 @@ button:disabled {
   color: #ffb3c0;
 }
 
+.offline-shell {
+  width: min(760px, calc(100% - 28px), calc(100vw - 28px));
+  overflow-x: hidden;
+}
+
+.offline-setup,
+.offline-game {
+  display: grid;
+  gap: 14px;
+  overflow: hidden;
+}
+
+.offline-setup h1,
+.offline-complete h2 {
+  margin: 0;
+  color: #fff;
+  line-height: 1.05;
+}
+
+.offline-setup h1 {
+  font-size: clamp(34px, 5vw, 52px);
+}
+
+.offline-setup p,
+.offline-draw-card p,
+.offline-complete p {
+  margin: 0;
+}
+
+.offline-controls,
+.offline-stepper,
+.stepper-actions,
+.offline-game-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.offline-controls,
+.offline-game-head {
+  justify-content: space-between;
+}
+
+.offline-stepper {
+  flex: 1;
+  min-width: 0;
+  justify-content: space-between;
+  min-height: 56px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.offline-stepper span {
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.stepper-actions strong {
+  min-width: 34px;
+  color: #fff;
+  font-size: 24px;
+  text-align: center;
+}
+
+.icon-button {
+  width: 38px;
+  min-height: 38px;
+  padding: 0;
+}
+
+.offline-toggle {
+  min-height: 56px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.offline-card-grid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.offline-seat-card {
+  min-height: 58px;
+  display: grid;
+  gap: 2px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.offline-seat-card span {
+  color: #fff;
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.offline-seat-card strong {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.offline-seat-card.current {
+  border-color: rgba(157, 124, 255, 0.76);
+  box-shadow: 0 0 28px rgba(157, 124, 255, 0.18);
+}
+
+.offline-seat-card.drawn {
+  opacity: 0.46;
+}
+
+.offline-draw-card {
+  min-height: 260px;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 12px;
+  padding: 22px;
+  border: 1px solid rgba(157, 124, 255, 0.34);
+  border-radius: 16px;
+  text-align: center;
+  background:
+    linear-gradient(145deg, rgba(157, 124, 255, 0.22), rgba(66, 165, 255, 0.08)),
+    rgba(8, 12, 26, 0.78);
+  box-shadow: 0 18px 54px rgba(0, 0, 0, 0.32), 0 0 34px rgba(157, 124, 255, 0.14);
+}
+
+.offline-draw-card span {
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.offline-draw-card strong {
+  color: #fff;
+  font-size: clamp(34px, 8vw, 56px);
+  line-height: 1;
+}
+
+.offline-draw-card.revealed {
+  border-color: rgba(255, 77, 109, 0.42);
+  box-shadow: 0 18px 54px rgba(0, 0, 0, 0.32), 0 0 34px rgba(255, 77, 109, 0.14);
+}
+
+.offline-complete {
+  min-height: 260px;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
 .floating-error {
   text-align: center;
 }
@@ -1035,6 +1192,96 @@ button:disabled {
     font-size: 12px;
   }
 
+  .offline-shell {
+    width: calc(100% - 12px);
+    max-width: calc(100vw - 12px);
+    overflow-x: hidden;
+  }
+
+  .offline-setup,
+  .offline-game {
+    gap: 8px;
+    overflow: hidden;
+  }
+
+  .offline-setup h1 {
+    font-size: clamp(28px, 8vw, 36px);
+  }
+
+  .offline-controls,
+  .offline-game-head {
+    gap: 6px;
+  }
+
+  .offline-controls {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .offline-stepper,
+  .offline-toggle {
+    min-height: 42px;
+    padding: 0 10px;
+    border-radius: 12px;
+  }
+
+  .offline-stepper span {
+    font-size: 13px;
+  }
+
+  .stepper-actions {
+    gap: 6px;
+  }
+
+  .stepper-actions strong {
+    min-width: 22px;
+    font-size: 18px;
+  }
+
+  .icon-button {
+    width: 30px;
+    min-height: 30px;
+  }
+
+  .offline-card-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 5px;
+  }
+
+  .offline-setup .rule-grid {
+    width: 100%;
+    max-width: none;
+  }
+
+  .offline-seat-card {
+    min-height: 46px;
+    padding: 5px;
+    border-radius: 10px;
+  }
+
+  .offline-seat-card span {
+    font-size: 16px;
+  }
+
+  .offline-seat-card strong {
+    font-size: 10px;
+  }
+
+  .offline-draw-card,
+  .offline-complete {
+    min-height: 250px;
+  }
+
+  .offline-draw-card {
+    gap: 9px;
+    padding: 16px;
+    border-radius: 14px;
+  }
+
+  .offline-draw-card strong {
+    font-size: clamp(30px, 10vw, 44px);
+  }
+
   .floating-error {
     margin: 0;
     font-size: 12px;
@@ -1114,5 +1361,18 @@ button:disabled {
 
   .vote-button {
     min-height: 36px;
+  }
+
+  .offline-draw-card,
+  .offline-complete {
+    min-height: 214px;
+  }
+
+  .offline-card-grid {
+    gap: 4px;
+  }
+
+  .offline-seat-card {
+    min-height: 40px;
   }
 }

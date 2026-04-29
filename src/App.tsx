@@ -5,10 +5,13 @@ import {
   Crown,
   Eye,
   LogIn,
+  Minus,
   MessageCircle,
   Play,
+  Plus,
   RefreshCw,
   Settings,
+  Shuffle,
   Swords,
   Ticket,
   Users,
@@ -16,6 +19,7 @@ import {
 } from 'lucide-react'
 import './App.css'
 import { getAlivePlayers, getCurrentSpeaker, getRolePlan, winnerLabel } from './lib/gameRules'
+import { createOfflineGame, type OfflineAssignment, type OfflineGame } from './lib/offlineGame'
 import {
   createRoom,
   joinRoom,
@@ -37,6 +41,7 @@ function App() {
     <HashRouter>
       <Routes>
         <Route path="/" element={<HomePage />} />
+        <Route path="/offline" element={<OfflinePage />} />
         <Route path="/room/:code" element={<RoomPage />} />
       </Routes>
     </HashRouter>
@@ -115,6 +120,10 @@ function HomePage() {
             <Play size={18} />
             创建房间
           </button>
+          <Link className="secondary-link" to="/offline">
+            <Shuffle size={18} />
+            线下抽卡模式
+          </Link>
         </div>
 
         <div className="join-row">
@@ -134,6 +143,197 @@ function HomePage() {
         {error && <p className="error-text">{error}</p>}
       </section>
     </main>
+  )
+}
+
+function OfflinePage() {
+  const [playerCount, setPlayerCount] = useState(6)
+  const [enableBlank, setEnableBlank] = useState(true)
+  const [game, setGame] = useState<OfflineGame | null>(null)
+  const [activeSeat, setActiveSeat] = useState(1)
+  const [revealed, setRevealed] = useState(false)
+  const [drawnSeats, setDrawnSeats] = useState<number[]>([])
+
+  const plan = getRolePlan(playerCount, enableBlank)
+  const drawnSet = new Set(drawnSeats)
+  const selectedAssignment = game?.assignments.find((assignment) => assignment.seat === activeSeat) ?? null
+  const activeAssignment = selectedAssignment && !drawnSet.has(selectedAssignment.seat) ? selectedAssignment : null
+  const remainingCount = game ? game.assignments.length - drawnSeats.length : playerCount
+
+  function startOfflineGame() {
+    const nextGame = createOfflineGame(playerCount, enableBlank)
+    setGame(nextGame)
+    setActiveSeat(1)
+    setRevealed(false)
+    setDrawnSeats([])
+  }
+
+  function resetOfflineGame() {
+    setGame(null)
+    setActiveSeat(1)
+    setRevealed(false)
+    setDrawnSeats([])
+  }
+
+  function finishCurrentCard() {
+    if (!game || !activeAssignment) return
+    const nextDrawnSeats = [...new Set([...drawnSeats, activeAssignment.seat])]
+    const nextAssignment = game.assignments.find((assignment) => !nextDrawnSeats.includes(assignment.seat))
+
+    setDrawnSeats(nextDrawnSeats)
+    setRevealed(false)
+    if (nextAssignment) setActiveSeat(nextAssignment.seat)
+  }
+
+  return (
+    <main className="room-shell offline-shell">
+      <header className="room-header">
+        <Link className="brand-row compact-brand" to="/">
+          <span className="brand-mark">卧</span>
+          <span>线下抽卡</span>
+        </Link>
+        {game && (
+          <div className="room-code">
+            <Ticket size={16} />
+            {game.code}
+          </div>
+        )}
+        <StatusBadge tone={game ? 'focus' : 'safe'}>{game ? `剩余 ${remainingCount}` : `${playerCount} 人`}</StatusBadge>
+      </header>
+
+      {!game ? (
+        <section className="room-card offline-setup">
+          <TurnIndicator icon={<Shuffle size={22} />} tone="focus" label="线下模式" title="创建抽卡房间" />
+          <h1>一台手机发身份。</h1>
+          <p className="muted">适合面对面聚会：网站只负责开局、抽身份和发词，发言与投票在线下完成。</p>
+
+          <div className="offline-controls">
+            <div className="offline-stepper">
+              <span>玩家人数</span>
+              <div className="stepper-actions">
+                <button
+                  className="secondary-button icon-button"
+                  type="button"
+                  disabled={playerCount <= 4}
+                  onClick={() => setPlayerCount((count) => Math.max(4, count - 1))}
+                >
+                  <Minus size={16} />
+                </button>
+                <strong>{playerCount}</strong>
+                <button
+                  className="secondary-button icon-button"
+                  type="button"
+                  disabled={playerCount >= 10}
+                  onClick={() => setPlayerCount((count) => Math.min(10, count + 1))}
+                >
+                  <Plus size={16} />
+                </button>
+              </div>
+            </div>
+
+            <label className="toggle-row offline-toggle">
+              <input type="checkbox" checked={enableBlank} onChange={(event) => setEnableBlank(event.target.checked)} />
+              <span>启用白板</span>
+            </label>
+          </div>
+
+          <div className="rule-grid">
+            <Metric label="平民" value={plan.civilians} />
+            <Metric label="卧底" value={plan.undercovers} />
+            <Metric label="白板" value={plan.blanks} />
+          </div>
+
+          <button className="primary-button full" type="button" onClick={startOfflineGame}>
+            <Swords size={18} />
+            创建线下房间
+          </button>
+        </section>
+      ) : (
+        <section className="room-card offline-game">
+          <div className="offline-game-head">
+            <TurnIndicator icon={<Ticket size={22} />} tone="focus" label={`房号 ${game.code}`} title="轮流抽卡" />
+            <StatusBadge tone="safe">{drawnSeats.length}/{game.assignments.length} 已抽取</StatusBadge>
+          </div>
+
+          <div className="offline-card-grid">
+            {game.assignments.map((assignment) => (
+              <button
+                className={`offline-seat-card ${assignment.seat === activeSeat ? 'current' : ''} ${
+                  drawnSet.has(assignment.seat) ? 'drawn' : ''
+                }`}
+                key={assignment.seat}
+                type="button"
+                disabled={drawnSet.has(assignment.seat)}
+                onClick={() => {
+                  setActiveSeat(assignment.seat)
+                  setRevealed(false)
+                }}
+              >
+                <span>{assignment.seat}</span>
+                <strong>{drawnSet.has(assignment.seat) ? '已抽' : '待抽'}</strong>
+              </button>
+            ))}
+          </div>
+
+          {activeAssignment ? (
+            <OfflineCard assignment={activeAssignment} revealed={revealed} onReveal={() => setRevealed(true)} onDone={finishCurrentCard} />
+          ) : (
+            <div className="offline-complete">
+              <BadgeCheck size={28} />
+              <h2>身份已全部抽取</h2>
+              <p className="muted">把手机放回桌面，开始第一轮描述。</p>
+              <button className="primary-button full" type="button" onClick={startOfflineGame}>
+                重新发牌
+              </button>
+            </div>
+          )}
+
+          <button className="ghost-button" type="button" onClick={resetOfflineGame}>
+            返回设置
+          </button>
+        </section>
+      )}
+    </main>
+  )
+}
+
+function OfflineCard({
+  assignment,
+  revealed,
+  onReveal,
+  onDone,
+}: {
+  assignment: OfflineAssignment
+  revealed: boolean
+  onReveal: () => void
+  onDone: () => void
+}) {
+  const roleText = assignment.role === 'undercover' ? '卧底' : assignment.role === 'blank' ? '白板' : '平民'
+  const wordText = assignment.role === 'blank' ? '你没有词，请靠听描述伪装。' : assignment.word
+
+  return (
+    <div className={`offline-draw-card ${revealed ? 'revealed' : ''}`}>
+      {!revealed ? (
+        <>
+          <span>第 {assignment.seat} 位玩家</span>
+          <strong>身份牌未翻开</strong>
+          <p>确认只有自己能看到屏幕后再抽取。</p>
+          <button className="primary-button full" type="button" onClick={onReveal}>
+            <Eye size={18} />
+            抽取身份
+          </button>
+        </>
+      ) : (
+        <>
+          <span>{roleText}</span>
+          <strong>{wordText}</strong>
+          <p>记住身份词后，点击隐藏并把手机交给下一位。</p>
+          <button className="primary-button full" type="button" onClick={onDone}>
+            我已记住，隐藏
+          </button>
+        </>
+      )}
+    </div>
   )
 }
 
